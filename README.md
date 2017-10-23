@@ -2,7 +2,7 @@
 Process Hollowing Packer Only Using FileMapping
 (Does NOT use ReadProcessMemory,WriteProcessMemory, SetThreadContext, CreateRemoteThread)
 
-For Malware Analysis / Class Training / Exe Shrinking
+For Malware Analysis / Class Training
 
 
 
