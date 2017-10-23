@@ -2,9 +2,8 @@
 Process Hollowing Packer Only Using FileMapping
 (Does NOT use ReadProcessMemory,WriteProcessMemory, SetThreadContext, CreateRemoteThread)
 
-*Educational Purposes*
-
-Malware Analysis / Class Training / CTF
+*Educational/Training Purposes*
+(Malware Analysis / Class Training / CTF)
 
 
 
