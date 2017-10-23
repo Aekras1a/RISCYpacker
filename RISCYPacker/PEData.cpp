@@ -67,6 +67,7 @@ bool sortOFT(IMAGE_IMPORT_DESCRIPTOR* a, IMAGE_IMPORT_DESCRIPTOR* b)
 	if (a->OriginalFirstThunk > b->OriginalFirstThunk)
 		return false;
 	return true;
+	
 }
 
 void PEData::ExtractImports()

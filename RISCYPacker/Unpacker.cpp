@@ -14,7 +14,7 @@ IMAGE_DOS_HEADER *Unpacker::Unpack()
 {
 	HMODULE hMod = GetModuleHandle(NULL);
 	HRSRC res = FindResource(hMod, MAKEINTRESOURCE(IDR_DATA1), L"DATA");
-	return (IMAGE_DOS_HEADER*)LoadResource(hMod, res);
+	exe = (IMAGE_DOS_HEADER*)LoadResource(hMod, res);
 
 	DWORD packedSize = SizeofResource(hMod, res);
 	
@@ -35,8 +35,9 @@ IMAGE_DOS_HEADER *Unpacker::Unpack()
 		boost::iostreams::write(os, reinterpret_cast<const char*>(&compressed[0]), compressed.size());
 	}
 
-
-	return (IMAGE_DOS_HEADER *)decompressed.data();
+	BYTE* exeBuff = (BYTE*)HeapAlloc(GetProcessHeap(), MEM_COMMIT, decompressed.size());
+	std::copy(decompressed.begin(), decompressed.end(), exeBuff);
+	return (IMAGE_DOS_HEADER *)exeBuff;
 	
 
 }

@@ -4,27 +4,41 @@
 #include "stdafx.h"
 #include <Windows.h>
 #include <string>
-#include "Packer.h"
+#include "ResourcePacker.h"
+#include "resource.h"
+#include <iostream>
+#include "UI.h"
 
 int main()
 {
 	int argc;
 	LPWSTR *argv;
 	argv = CommandLineToArgvW(GetCommandLineW(), &argc);
-	if (argc < 2)
-		Error::ErrExit(L"Not Enough Arguments",ERROR_INVALID_ARGUEMENT);
 	
+	Settings settings = UI::Run();
 
-	HANDLE hExe = CreateFile(argv[1], GENERIC_READ, 0, NULL, OPEN_EXISTING, NULL, NULL);
-	if (!hExe)
-		Error::ErrExit(L"File either does not exist or cannot be open", ERROR_CANNOT_OPEN_FILE);
-	LARGE_INTEGER fSize = { 0,0 };
-	GetFileSizeEx(hExe, &fSize);
-	IMAGE_DOS_HEADER* exe = (IMAGE_DOS_HEADER*)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, fSize.LowPart);
-	ReadFile(hExe, (void*)exe, fSize.LowPart, NULL, NULL);
-	Packer p;
-	BYTE* packedExe = p.Pack(exe,fSize.LowPart);
+	HMODULE hMod = GetModuleHandle(NULL);
+	HRSRC res = FindResource(hMod, MAKEINTRESOURCE(IDR_DATA1), L"DATA");
+	void* resExe = (void*)LoadResource(hMod, res);
+	
+	DWORD fSize = SizeofResource(hMod, res);
+	void* exe = HeapAlloc(GetProcessHeap(), MEM_COMMIT, fSize);
+	memcpy(exe, resExe, fSize);
+	Packer* packer = NULL;
 
-    return SUCCESS;
+	switch (settings.packLocation)
+	{
+		case PackLocation::Resource:
+			packer = new ResourcePacker((IMAGE_DOS_HEADER*)exe, fSize, settings);
+
+		//add other options here
+	}
+
+	if (!packer->Pack())
+		UI::ErrorMsg(std::wstring(L"Unable to create EXE to " + packer->GetOutputExePath()));
+
+	UI::SuccessMsg(std::wstring(L"Success: created " + packer->GetOutputExePath()));
+	cout << "Press any key to exit..." << endl;
+	system("pause > nul");
 }
 

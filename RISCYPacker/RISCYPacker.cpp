@@ -32,7 +32,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     // TODO: Place code here.
 	
 	Unpacker upack;
-	upack.UnpackIntoProcess(L"C:\\Users\\capta\\Desktop\\WoT_internet_install_na.exe");
+	upack.UnpackIntoProcess(L"C:\\Windows\\explorer.exe");
 
 }
 

@@ -74,11 +74,12 @@ private:
 	size_t IATshellcodeSize=0;
 	std::wstring hollowedProcPath;
 	HANDLE hProc;
+	HANDLE hThread;
 	TNtUnmapViewOfSection NtUnmapViewOfSection;
 	TNtMapViewOfSection NtMapViewOfSection;
 	TNtCreateSection NtCreateSection;
 	std::vector<PEData *> sections;
-	
+
 	/*************HOLLOW ROUTINES***************/
 	void ReMapExe();
 	size_t SerializeIATInfo();
