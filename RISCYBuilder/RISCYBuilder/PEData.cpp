@@ -103,7 +103,7 @@ void PEData::WriteResource(std::vector<BYTE> buff, size_t size, std::string resN
 					int dataOffset = Rva2Offset(data_entry->OffsetToData);
 					memset((void*)((int)this->exe.buff+dataOffset), 0, data_entry->Size);
 					data_entry->Size = size;
-					HollowOutExe(size, dataOffset);
+					//HollowOutExe(size, dataOffset);
 					memcpy((void*)((int)this->exe.buff + dataOffset), buff.data(), size);
 				}
 			}

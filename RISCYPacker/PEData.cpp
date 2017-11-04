@@ -11,13 +11,14 @@ PEData::PEData(IMAGE_DOS_HEADER *exe)
 
 PEData::PEData(std::wstring filePath)
 {
-	HANDLE hPE = CreateFile(filePath.c_str(), GENERIC_READ, NULL, NULL, OPEN_EXISTING, 0, 0);
-	if (hPE == NULL)
+	HANDLE hPE = CreateFile(filePath.c_str(), GENERIC_READ, 0, NULL, OPEN_EXISTING, 0, 0);
+	if (hPE == INVALID_HANDLE_VALUE)
 		exit(-1);
 	LARGE_INTEGER fileSize = { 0,0 };
 	GetFileSizeEx(hPE, &fileSize);
 	IMAGE_DOS_HEADER *hollowedImage = (IMAGE_DOS_HEADER*)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, fileSize.LowPart);
-	ReadFile(hPE, (void*)hollowedImage, fileSize.LowPart, NULL, NULL);
+	DWORD written;
+	ReadFile(hPE, (void*)hollowedImage, fileSize.LowPart, &written, NULL);
 	CloseHandle(hPE);
 
 	Init(hollowedImage);
@@ -31,6 +32,11 @@ void PEData::Init(IMAGE_DOS_HEADER *exe)
 	this->I_optionalHeader = (IMAGE_OPTIONAL_HEADER*)&this->I_ntHeader->OptionalHeader;
 	ExtractSections();
 	ExtractImports();
+}
+
+void* PEData::GetExeBuffer()
+{
+	return this->exe;
 }
 
 DWORD PEData::Rva2Offset(DWORD dwRva)
@@ -52,10 +58,11 @@ DWORD PEData::Rva2Offset(DWORD dwRva)
 void PEData::ExtractSections()
 {
 	IMAGE_SECTION_HEADER *secHeader = IMAGE_FIRST_SECTION(this->I_ntHeader);
-
+	bool isExecutable;
 	for (int i = 0; i < this->I_fileHeader->NumberOfSections; i++)
 	{
-		si.push_back(SectionInfo((char*)secHeader->Name, secHeader->PointerToRawData, secHeader->VirtualAddress, secHeader->SizeOfRawData, secHeader->Misc.VirtualSize));
+		isExecutable = secHeader->Characteristics & 0x40000000;
+		si.push_back(SectionInfo((char*)secHeader->Name, isExecutable, secHeader->PointerToRawData, secHeader->VirtualAddress, secHeader->SizeOfRawData, secHeader->Misc.VirtualSize));
 		secHeader++;
 	}
 

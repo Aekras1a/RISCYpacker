@@ -36,9 +36,6 @@
     <ClInclude Include="PEData.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="RISCYPacker.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Shellcode.h">
       <Filter>Header Files</Filter>
     </ClInclude>

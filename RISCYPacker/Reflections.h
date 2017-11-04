@@ -3,7 +3,6 @@
 #include <map>
 #define RET_INT3_INT3_INT3 0xCCCCCCC3
 
-
 size_t GetFunctionSize(void* function)
 {
 	size_t size=0;
@@ -23,10 +22,24 @@ void FindReplaceMemory(void* mem, size_t memLength, std::map<T,T> replacer)
 		{
 			if (*(T*)pos == it->first) {
 				*(T*)pos = (T)it->second;
-				break;
 			}
 		  pos=((BYTE*)pos)+1;
 		}
 	}
+}
+
+template <typename T>
+DWORD FindMemory(void* mem, size_t memLength, T pattern)
+{
+	void* pos;
+	pos = mem;
+	while ((int)pos<((int)mem + (int)memLength))
+	{
+		if (pattern == *(T*)pos) {
+			return (DWORD)pos;
+		}
+		pos = ((BYTE*)pos) + 1;
+	}
 	
+	return 0;
 }

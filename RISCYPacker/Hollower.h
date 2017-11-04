@@ -13,6 +13,8 @@
 #define GETPROCADDRESS_PLACEHOLDER 0xc0deface
 #define OEP_PLACEHOLDER 0xc0defade
 #define PUSH 0x68
+#define NOP 0x90
+#define JMP 0xE9
 #define PUSH_PLACEHOLDER 0xfec0de00
 
 #define NT_SUCCESS(Status) ((NTSTATUS)(Status) >= 0)
@@ -32,6 +34,8 @@ typedef struct _OBJECT_ATTRIBUTES {
 	PVOID           SecurityDescriptor;
 	PVOID           SecurityQualityOfService;
 }  OBJECT_ATTRIBUTES, *POBJECT_ATTRIBUTES;
+
+/*********************************NT Routines - BEGIN********************************************/
 
 typedef NTSTATUS(WINAPI *TNtUnmapViewOfSection)(HANDLE ProcessHandle, PVOID BaseAddress);
 
@@ -57,34 +61,56 @@ typedef NTSTATUS(WINAPI *TNtCreateSection)(
 	HANDLE FileHandle
 	);
 
+typedef NTSTATUS (WINAPI *TNtQueryInformationProcess)(
+	_In_      HANDLE           ProcessHandle,
+	_In_      unsigned int     ProcessInformationClass,
+	_Out_     PVOID            ProcessInformation,
+	_In_      ULONG            ProcessInformationLength,
+	_Out_opt_ PULONG           ReturnLength
+);
+/***************************NT Routines - END*********************************/
+
 class Hollower
 {
 public:
 	Hollower(std::wstring targetProcPath, IMAGE_DOS_HEADER *unpackedExe);
 	HANDLE DoHollow();
 	~Hollower();
+	void UnmapAtAddress(HANDLE proc, void* addr);
+	bool MapAtAddress(HANDLE proc, HANDLE hSection, void* &remoteAddr);
+	HANDLE hRemoteProc;
+	HANDLE hNopSection;
+	void* remoteCodeBase = NULL;
+
 private:
+	void SprayLoopTrap();
+	int IATBootstrapEP;
+	HANDLE CreateSectionBuffer(void* &base, SIZE_T size);
+	void WriteSections();
 	PEData *packedPEData,*hollowedPEData;
 	void *imageOffset;
-	void* localSectionBase = NULL;
-	void* remoteBase = NULL;
+	void* localCodeSectionBase = NULL;
+	void* localNopSectionBase = NULL;
 	void WriteIATInfo(size_t IATInfoOffset);
 	void FixRelocations();
+	void SwapMemory();
+	void* remoteNopBase;
+	static DWORD WINAPI MemHotswap(LPVOID lparam);
 	size_t containsStringSize=0;
 	size_t IATshellcodeSize=0;
 	std::wstring hollowedProcPath;
-	HANDLE hProc;
-	HANDLE hThread;
+	HANDLE hRemoteThread;
 	TNtUnmapViewOfSection NtUnmapViewOfSection;
 	TNtMapViewOfSection NtMapViewOfSection;
 	TNtCreateSection NtCreateSection;
+	TNtQueryInformationProcess NtQueryInformationProcess;
 	std::vector<PEData *> sections;
 
 	/*************HOLLOW ROUTINES***************/
-	void ReMapExe();
+	void MapBlankMemory();
 	size_t SerializeIATInfo();
 	void InjectBootstrapCode(size_t offset);
-	void CreateSuspendedProcess();
+	void StartRemoteProcess();
 
 };
 
@@ -107,7 +133,7 @@ typedef struct _LDR_DATA_TABLE_ENTRY {
 	BYTE Reserved4[8];
 	PVOID Reserved5[3];
 #pragma warning(push)
-#pragma warning(disable: 4201) // we'll always use the Microsoft compiler
+#pragma warning(disable: 4201) 
 	union {
 		ULONG CheckSum;
 		PVOID Reserved6;

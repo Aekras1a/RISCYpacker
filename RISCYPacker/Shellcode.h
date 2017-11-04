@@ -6,6 +6,7 @@
 bool ContainsString(char* src, char* str, bool isUnicode)
 {
 	int i = 0, k = 0, strLen = 0;
+	char uP='a';
 	//strlen
 	while ((str[strLen] != NULL && !isUnicode) || ((str[strLen - 1] != NULL || str[strLen] != NULL) && isUnicode))
 		strLen++;
@@ -15,12 +16,19 @@ bool ContainsString(char* src, char* str, bool isUnicode)
 	//string contains?
 	while ((src[i] && !isUnicode) || ((src[i - 1] | src[i]) && isUnicode))
 	{
-		while (src[i] == str[k])
+		uP = src[i]; //copy since it may be in READ-ONLY section
+		if (uP >= 'a' && uP <= 'z') //UPPER
+			uP -= 32;
+		while (uP == str[k])
 		{
 			if (k == strLen)
 				return true;
 			i += (1 + isUnicode);
 			k += (1 + isUnicode);
+
+			uP = src[i]; //copy since it may be in READ-ONLY section
+			if (uP >= 'a' && uP <= 'z') //UPPER
+				uP -= 32;
 		}
 		i += (1 + isUnicode);
 		k = 0;
@@ -43,12 +51,15 @@ void IATshellcode()
 	/*place holders applied to search and replace these addresses at runtime*/
 	DWORD *serializedIATinfo = (DWORD*)SECTION_BASE_PLACEHOLDER;
 	DWORD *iatLocation = (DWORD*)IAT_LOCATION_PLACEHOLDER;
-	DWORD(*TContainsString)(char* src, char* str, bool isUnicode) = (DWORD(*)(char*, char*, bool))CONTAINS_STRING_PLACEHOLDER;
+	bool(*TContainsString)(char* src, char* str, bool isUnicode) = (bool(*)(char*, char*, bool))CONTAINS_STRING_PLACEHOLDER;
 	char* kernel32Str = (char*)KERNEL32_PLACEHOLDER;
 	char* loadlibraryStr = (char*)LOADLIBRARY_PLACEHOLDER;
 	char* getprocaddressStr = (char*)GETPROCADDRESS_PLACEHOLDER;
 	DWORD oep = OEP_PLACEHOLDER;
 	/**********************************************************************/
+    DWORD(*TGetProcAddress)(DWORD base, char* funcName);
+	 int i = 0;
+	 char* currLib = NULL;
 
 	LIST_ENTRY *leHead = &PEB->Ldr->InMemoryOrderModuleList;
 	LIST_ENTRY *leNode = leHead;
@@ -69,10 +80,10 @@ void IATshellcode()
 		return;
 
 	IMAGE_DOS_HEADER* kernel32Image = (IMAGE_DOS_HEADER*)kernel32Base;
-	IMAGE_NT_HEADERS *kernel32NtHeader = (IMAGE_NT_HEADERS*)((int)kernel32Image + (kernel32Image)->e_lfanew);
-	IMAGE_OPTIONAL_HEADER *kernel32OptionalHeader = (IMAGE_OPTIONAL_HEADER*)&kernel32NtHeader->OptionalHeader;
+	IMAGE_NT_HEADERS* kernel32NtHeader = (IMAGE_NT_HEADERS*)((int)kernel32Image + (kernel32Image)->e_lfanew);
+	IMAGE_OPTIONAL_HEADER* kernel32OptionalHeader = (IMAGE_OPTIONAL_HEADER*)&kernel32NtHeader->OptionalHeader;
 
-	IMAGE_EXPORT_DIRECTORY *kernel32Exports = (IMAGE_EXPORT_DIRECTORY*)((int)kernel32Base + kernel32OptionalHeader->DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT].VirtualAddress);
+	IMAGE_EXPORT_DIRECTORY* kernel32Exports = (IMAGE_EXPORT_DIRECTORY*)((int)kernel32Base + kernel32OptionalHeader->DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT].VirtualAddress);
 	DWORD *functionsNames = (DWORD*)((int)kernel32Base + kernel32Exports->AddressOfNames);
 	int funcIndex = 0, getProcAddderIndex, loadLibraryIndex;
 	while (1)
@@ -93,12 +104,11 @@ void IATshellcode()
 	}
 
 	DWORD *functions = (DWORD*)((int)kernel32Base + kernel32Exports->AddressOfFunctions);
-	DWORD(*TGetProcAddress)(DWORD base, char* funcName) = ((DWORD(*)(DWORD, char*))((int)kernel32Base + functions[getProcAddderIndex]));
+	TGetProcAddress =  ((DWORD(*)(DWORD, char*))((int)kernel32Base + functions[getProcAddderIndex]));
 	DWORD(*TLoadLibrary)(char* libName) = ((DWORD(*)(char*))((int)kernel32Base + functions[loadLibraryIndex]));
 
-	int i = 0;
-	char* currLib = (char*)serializedIATinfo;
-	char* currFunc;
+	currLib = (char*)serializedIATinfo;
+    char* currFunc = NULL;
 	DWORD libBase;
 	//start -1 for loops sake
 	iatLocation--;
@@ -113,9 +123,8 @@ void IATshellcode()
 			
 			//eat up library string
 			while (((char*)serializedIATinfo)[i] != NULL)
-			{
 				i++;
-			}
+			
 			i++;
 			libBase = TLoadLibrary(currLib);
 
@@ -125,19 +134,13 @@ void IATshellcode()
 		currFunc = (char*)(((char*)serializedIATinfo) + i);
 		//eat up function string
 		while (((char*)serializedIATinfo)[i] != NULL)
-		{
 			i++;
-		}
 		i++;
 
 		*iatLocation = (DWORD)TGetProcAddress(libBase, currFunc);
 		iatLocation++;
 	}
 
-	__asm {
-		
-		jmp oep;
-	}
 }
 
 /**********************************</No CRT/Windows API allowed>**************************************/

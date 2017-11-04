@@ -37,13 +37,12 @@ IMAGE_DOS_HEADER *Unpacker::Unpack()
 
 	BYTE* exeBuff = (BYTE*)HeapAlloc(GetProcessHeap(), MEM_COMMIT, decompressed.size());
 	std::copy(decompressed.begin(), decompressed.end(), exeBuff);
-	return (IMAGE_DOS_HEADER *)exeBuff;
-	
-
+	return (IMAGE_DOS_HEADER *)exeBuff;	
 }
+
 bool Unpacker::UnpackIntoProcess(std::wstring procPath)
 {
-	this->exe=Unpack();
+	this->exe = Unpack();
 	if (!this->exe)
 		return false;
 	Hollower *hollow = new Hollower(procPath, this->exe);
