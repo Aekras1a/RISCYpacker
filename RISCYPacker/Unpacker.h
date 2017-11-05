@@ -6,10 +6,13 @@ class Unpacker
 {
 public:
 	Unpacker();
-	bool UnpackIntoProcess(std::wstring procPath);
+	bool UnpackIntoProcess();
 	~Unpacker();
 private:
-	IMAGE_DOS_HEADER *exe;
-	IMAGE_DOS_HEADER *Unpack();
+	BYTE *data;
+	BYTE packLocation;
+	std::wstring procPath;
+	IMAGE_DOS_HEADER* exe;
+	BYTE* Unpack();
 };
 

@@ -28,15 +28,10 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 {
     UNREFERENCED_PARAMETER(hPrevInstance);
     UNREFERENCED_PARAMETER(lpCmdLine);
-
-    // TODO: Place code here.
 	
 	Unpacker upack;
-	WCHAR fileName[MAX_PATH] = L"C:\\Users\\capta\\Documents\\Visual Studio 2017\\Projects\\MinimalExe\\Release\\Malicious-nomove.exe";
-	//GetModuleFileName(NULL, fileName, MAX_PATH);
-	upack.UnpackIntoProcess(fileName);
+	upack.UnpackIntoProcess();
 }
-
 
 //
 //  FUNCTION: MyRegisterClass()

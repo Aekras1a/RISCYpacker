@@ -1,6 +1,21 @@
 #pragma once
 #include "stdafx.h"
 
+/*<DUMMY VALUES>*/
+#define SECTION_BASE_PLACEHOLDER 0xdeadbeef
+#define IAT_LOCATION_PLACEHOLDER 0xbeefdead
+#define CONTAINS_STRING_PLACEHOLDER 0xfeeddead
+#define KERNEL32_PLACEHOLDER 0xdeadc0de
+#define LOADLIBRARY_PLACEHOLDER 0xc0dedead
+#define GETPROCADDRESS_PLACEHOLDER 0xc0deface
+#define OEP_PLACEHOLDER 0xc0defade
+/*</DUMMY VALUES>*/
+
+#define PUSH 0x68
+#define NOP 0x90
+#define JMP 0xE9
+#define PUSH_PLACEHOLDER 0xfec0de00
+
 /**********************************<No CRT/Windows API allowed>**************************************/
 
 bool ContainsString(char* src, char* str, bool isUnicode)
@@ -108,20 +123,20 @@ void IATshellcode()
 	DWORD(*TLoadLibrary)(char* libName) = ((DWORD(*)(char*))((int)kernel32Base + functions[loadLibraryIndex]));
 
 	currLib = (char*)serializedIATinfo;
-    char* currFunc = NULL;
+	char* currFunc = NULL;
 	DWORD libBase;
 	//start -1 for loops sake
 	iatLocation--;
-	//while not end of IAT info (null.null.null)
+	//while not end of IAT info (null,null,null)
 	while (((char*)serializedIATinfo)[i] != NULL || ((char*)serializedIATinfo)[i + 1] != NULL || ((char*)serializedIATinfo)[i + 2] != NULL)
 	{
-		//Library end (null.null)
+		//Library end (null,null)
 		if (((char*)serializedIATinfo)[i] == NULL && ((char*)serializedIATinfo)[i + 1] == NULL)
 		{
 			i += 2;
 			currLib = (char*)(((char*)serializedIATinfo) + i);
 			
-			//eat up library string
+			//Go to end of library string (null)
 			while (((char*)serializedIATinfo)[i] != NULL)
 				i++;
 			
@@ -131,7 +146,7 @@ void IATshellcode()
 			*iatLocation = 0x00000000;
 			iatLocation++;
 		}
-		currFunc = (char*)(((char*)serializedIATinfo) + i);
+	    currFunc = (char*)(((char*)serializedIATinfo) + i);
 		//eat up function string
 		while (((char*)serializedIATinfo)[i] != NULL)
 			i++;
@@ -140,6 +155,22 @@ void IATshellcode()
 		*iatLocation = (DWORD)TGetProcAddress(libBase, currFunc);
 		iatLocation++;
 	}
+
+	/* BELOW RETURN WILL BE MODIFIED TO RET TO UNPACKED EXE ENTRYPOINT
+	* ------------
+	* PUSH UNPACKED_OEP
+	* RET
+	*-------------
+	*/
+
+	/*__asm {
+		nop
+		ret
+		int 3
+		int 3
+		int 3
+		int 3
+	}*/
 
 }
 

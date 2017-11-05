@@ -4,6 +4,8 @@
 #include <boost/iostreams/filter/zlib.hpp>
 #include <wincrypt.h>
 
+#define EXE_OFFSET 0x200
+
 Packer::Packer(IMAGE_DOS_HEADER *exe, size_t fSize, Settings setting)
 {
 	this->parentPEd = new PEData(exe, fSize);
@@ -14,12 +16,16 @@ Packer::Packer(IMAGE_DOS_HEADER *exe, size_t fSize, Settings setting)
 	LARGE_INTEGER packSize = { 0,0 };
 
 	GetFileSizeEx(hPackExe, &packSize);
-	IMAGE_DOS_HEADER* packExeBuff = (IMAGE_DOS_HEADER*)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, packSize.LowPart);
+	BYTE* packBuff = (BYTE*)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, packSize.LowPart + EXE_OFFSET);
+	*(BYTE*)packBuff = setting.packLocation;
+	std::string ansiPath(setting.exePath.begin(), setting.exePath.end());
+	memcpy(packBuff+2, ansiPath.c_str(), ansiPath.size());
 
-	ReadFile(hPackExe, (void*)packExeBuff, packSize.LowPart, NULL, NULL);
-	this->packPEd = new PEData(packExeBuff, packSize.LowPart);
-	this->packExe.buff = packExeBuff;
-	this->packExe.size = packSize.LowPart;
+
+	ReadFile(hPackExe, (void*)(packBuff + EXE_OFFSET), packSize.LowPart, NULL, NULL);
+	this->packPEd = new PEData((IMAGE_DOS_HEADER*)(packBuff + EXE_OFFSET), packSize.LowPart);
+	this->packData.buff = packBuff;
+	this->packData.size = packSize.LowPart;
 
 	std::wstring s = setting.exePath;
 	std::wstring extention = s.substr(s.find_last_of(L".") + 1);
@@ -66,8 +72,8 @@ void Packer::Crypt()
 void Packer::ZLIBcompress()
 {
 	boost::iostreams::filtering_ostream os;
-	const char* end = (char*)((int)this->packPEd->GetExeBuffer() + this->packExe.size);
-	const char* cExe = (char*)this->packExe.buff;
+	const char* end = (char*)((int)this->packPEd->GetExeBuffer() + this->packData.size);
+	const char* cExe = (char*)this->packData.buff;
 
 	std::vector<BYTE> decompressed;
 	decompressed.insert(decompressed.end(), cExe, end);

@@ -121,6 +121,7 @@
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <AdditionalIncludeDirectories>C:\Users\capta\Desktop\boost_1_64_0\</AdditionalIncludeDirectories>
       <WholeProgramOptimization>false</WholeProgramOptimization>
+      <InlineFunctionExpansion>Disabled</InlineFunctionExpansion>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -156,6 +157,7 @@
   <ItemGroup>
     <ClInclude Include="AVStringTable.h" />
     <ClInclude Include="Reflections.h" />
+    <ClInclude Include="Settings.h" />
     <ClInclude Include="Shellcode.h" />
     <ClInclude Include="Hollower.h" />
     <ClInclude Include="PEData.h" />

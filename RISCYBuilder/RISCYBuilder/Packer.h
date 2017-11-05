@@ -24,7 +24,7 @@ protected:
 	std::vector<BYTE> packedBinary;
 	PEData* packPEd;
 	PEData *parentPEd;
-	EXE packExe;
+	EXE packData;
 	EXE parentExe;
 	Settings setting;
 

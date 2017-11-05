@@ -2,6 +2,8 @@
 #include "PEData.h"
 #include <algorithm>
 
+#define EXE_OFFSET 0x200
+
 PEData::PEData(IMAGE_DOS_HEADER *exe,size_t size)
 {
 	Init(exe, size);
