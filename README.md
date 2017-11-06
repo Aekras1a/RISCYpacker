@@ -2,7 +2,7 @@
 Stealthy Process Hollowing Packer Only Using FileMapping
 
 *Educational/Training Purposes*
-(Malware Analysis / Class Training / CTF)
+(Classroom Training / Detection Development)
 
 
 ![alt text](https://i.imgur.com/iQvKRzj.png)
