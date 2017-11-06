@@ -88,12 +88,12 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>boost_1_64_0\;C:\Users\David\Documents\boost_1_65_1\boost_1_65_1</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>boost_1_64_0\;Documents\boost_1_65_1\boost_1_65_1</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
-      <AdditionalLibraryDirectories>boost_1_65_1\boost_1_65_1\stage\lib;C:\Users\capta\Desktop\boost_1_64_0\stage\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>boost_1_65_1\boost_1_65_1\stage\lib;boost_1_64_0\stage\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>Shlwapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <CustomBuildStep>
@@ -106,11 +106,11 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>boost_1_65_1\boost_1_65_1;%(AdditionalIncludeDirectories);C:\Users\David\Documents\boost_1_65_1\boost_1_65_1</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>boost_1_65_1\boost_1_65_1;%(AdditionalIncludeDirectories);boost_1_65_1\boost_1_65_1</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
-      <AdditionalLibraryDirectories>boost_1_65_1\boost_1_65_1\stage\lib;C:\Users\David\Documents\boost_1_65_1\boost_1_65_1\stage\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>boost_1_65_1\boost_1_65_1\stage\lib;boost_1_65_1\boost_1_65_1\stage\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -121,7 +121,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>C:\Users\capta\Desktop\boost_1_64_0\;C:\Users\David\Documents\boost_1_65_1\boost_1_65_1</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\capta\Desktop\boost_1_64_0\;boost_1_65_1\boost_1_65_1</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
     </ClCompile>
     <Link>
@@ -129,7 +129,7 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <AdditionalDependencies>Shlwapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>boost_1_65_1\boost_1_65_1\stage\lib;C:\Users\capta\Desktop\boost_1_64_0\stage\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>boost_1_65_1\boost_1_65_1\stage\lib;boost_1_64_0\stage\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -140,13 +140,13 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>boost_1_65_1\boost_1_65_1;%(AdditionalIncludeDirectories);C:\Users\David\Documents\boost_1_65_1\boost_1_65_1</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>boost_1_65_1\boost_1_65_1;%(AdditionalIncludeDirectories);boost_1_65_1\boost_1_65_1</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalLibraryDirectories>boost_1_65_1\boost_1_65_1\stage\lib;C:\Users\David\Documents\boost_1_65_1\boost_1_65_1\stage\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>boost_1_65_1\boost_1_65_1\stage\lib;boost_1_65_1\boost_1_65_1\stage\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
