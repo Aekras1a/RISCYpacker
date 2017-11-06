@@ -11,4 +11,4 @@ Process Hollowing Packer Only Using FileMapping
 
 ![alt text](https://i.imgur.com/4svECNc.png)
 
-![alt text](https://i.imgur.com/vvpZ4Pp.png)
+![alt text](https://i.imgur.com/QYRDPjQ.png)
