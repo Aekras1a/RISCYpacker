@@ -97,7 +97,7 @@
       <AdditionalDependencies>Shlwapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <CustomBuildStep>
-      <Command>"C:\Users\capta\Documents\Visual Studio 2017\Projects\MinimalExe\Release\MinimalExe.exe"</Command>
+      <Command>""</Command>
     </CustomBuildStep>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -121,7 +121,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>C:\Users\capta\Desktop\boost_1_64_0\;boost_1_65_1\boost_1_65_1</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>boost_1_64_0\;boost_1_65_1\boost_1_65_1</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
     </ClCompile>
     <Link>
