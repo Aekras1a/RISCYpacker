@@ -5,7 +5,6 @@ Stealthy Process Hollowing Packer Only Using FileMapping
 (Malware Analysis / Class Training / CTF)
 
 
-
 ![alt text](https://i.imgur.com/iQvKRzj.png)
 
 ![alt text](https://i.imgur.com/4svECNc.png)
