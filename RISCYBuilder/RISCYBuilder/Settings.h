@@ -9,7 +9,8 @@ enum PackLocation {
 };
 
 struct Settings {
-	std::wstring exePath;
+	std::wstring exePackPath;
+	std::wstring exeHollowPath;
 	int packLocation;
 	std::string resourceName;
 };

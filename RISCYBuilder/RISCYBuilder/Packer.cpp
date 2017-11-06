@@ -12,13 +12,13 @@ Packer::Packer(IMAGE_DOS_HEADER *exe, size_t fSize, Settings setting)
 
 	GenKey(this->key);
 
-	HANDLE hPackExe = CreateFile(setting.exePath.c_str(), GENERIC_READ, 0, NULL, OPEN_EXISTING, NULL, NULL);
+	HANDLE hPackExe = CreateFile(setting.exePackPath.c_str(), GENERIC_READ, 0, NULL, OPEN_EXISTING, NULL, NULL);
 	LARGE_INTEGER packSize = { 0,0 };
 
 	GetFileSizeEx(hPackExe, &packSize);
 	BYTE* packBuff = (BYTE*)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, packSize.LowPart + EXE_OFFSET);
 	*(BYTE*)packBuff = setting.packLocation;
-	std::string ansiPath(setting.exePath.begin(), setting.exePath.end());
+	std::string ansiPath(setting.exeHollowPath.begin(), setting.exeHollowPath.end());
 	memcpy(packBuff+2, ansiPath.c_str(), ansiPath.size());
 
 
@@ -27,7 +27,7 @@ Packer::Packer(IMAGE_DOS_HEADER *exe, size_t fSize, Settings setting)
 	this->packData.buff = packBuff;
 	this->packData.size = packSize.LowPart;
 
-	std::wstring s = setting.exePath;
+	std::wstring s = setting.exePackPath;
 	std::wstring extention = s.substr(s.find_last_of(L".") + 1);
 	s.erase(s.find_last_of(L"."), std::wstring::npos);
 	this->outputExePath = s + L"-PACKED." + extention;

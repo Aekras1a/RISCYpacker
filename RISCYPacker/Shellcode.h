@@ -153,6 +153,9 @@ void IATshellcode()
 		i++;
 
 		*iatLocation = (DWORD)TGetProcAddress(libBase, currFunc);
+		__asm {
+			sub esp, 8 //Visual studio screws up the stack. this fixes it
+		}
 		iatLocation++;
 	}
 
@@ -163,14 +166,14 @@ void IATshellcode()
 	*-------------
 	*/
 
-	/*__asm {
+	__asm {
 		nop
 		ret
 		int 3
 		int 3
 		int 3
 		int 3
-	}*/
+	}
 
 }
 

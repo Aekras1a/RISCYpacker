@@ -13,8 +13,8 @@ public:
 	static void SuccessMsg(wstring msg);
 private:
 	static void PrintBanner();
-	static void ColorText();
-	static wstring PromptPath();
+	static wstring PromptHollowPath();
+	static wstring PromptPackPath();
 	static int PromptPackLocation();
 	static string PromptResourceName();
 	static HANDLE hConsole;

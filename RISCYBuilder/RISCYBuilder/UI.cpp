@@ -4,7 +4,7 @@
 #include <Shlwapi.h>
 
 HANDLE UI::hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
-static string VERSION = "1.0";
+static string VERSION = "1.1";
 
 #define BLACK			0
 #define BLUE			1
@@ -42,15 +42,17 @@ void UI::PrintBanner()
 		"\n\t                         |___/                             ";
 
 	SetConsoleTextAttribute(hConsole, RED);
-	cout << endl << endl << "RISCyPacker (v"<< VERSION <<") - PE Packer." << endl << endl;
+	cout << endl << endl << "RISCyPacker (v"<< VERSION <<") - Process Hollowing PE Packer." << endl << endl;
 }
 
-wstring UI::PromptPath()
+wstring UI::PromptPackPath()
 {
 	wchar_t path[MAX_PATH];
 	SetConsoleTextAttribute(hConsole, YELLOW);
 	cout << endl;
+	SetConsoleTextAttribute(hConsole, LIGHTGREEN);
 	cout << "[Path to Executable]>";
+	SetConsoleTextAttribute(hConsole, YELLOW);
 	wcin.getline(path, MAX_PATH);
 	return path;
 }
@@ -60,9 +62,11 @@ int UI::PromptPackLocation()
 	int option;
 	SetConsoleTextAttribute(hConsole, YELLOW);
 	cout << endl;
+	SetConsoleTextAttribute(hConsole, LIGHTGREEN);
 	cout << "1 - Pack as Resource" << endl;
 	cout << "2 - Pack as Section [Not Supported]" << endl;
 	cout << "3 - Append packed data to PE [Not Supported]" << endl <<  endl;
+	SetConsoleTextAttribute(hConsole, YELLOW);
 	cout << "[Pack Location (" << PackLocation::Resource << "-"<< PackLocation::Appended <<")]>";
 	cin >> option;
 	
@@ -78,6 +82,20 @@ void UI::ErrorMsg(wstring msg)
 	SetConsoleTextAttribute(hConsole, YELLOW);
 }
 
+wstring UI::PromptHollowPath()
+{
+	wchar_t path[MAX_PATH];
+	SetConsoleTextAttribute(hConsole, YELLOW);
+	cout << endl;
+	cout << "Specify fullpath to Exe to hollow (MUST EXIST ON TARGET MACHINE)" << endl;
+	cout << endl;
+	SetConsoleTextAttribute(hConsole, LIGHTGREEN);
+	cout << "[Path to Executable]>";
+	SetConsoleTextAttribute(hConsole, YELLOW);
+	wcin.getline(path, MAX_PATH);
+	return path;
+}
+
 string UI::PromptResourceName()
 {
 	string name;
@@ -87,7 +105,9 @@ string UI::PromptResourceName()
 	cout << "Name of resource to unpack into" << endl;
 		UI::ErrorMsg(L"NOT SUPPORTED. LEAVE BLANK");
 	cout<< endl << endl;
+	SetConsoleTextAttribute(hConsole, LIGHTGREEN);
 	cout << "[Name of Resource]>";
+	SetConsoleTextAttribute(hConsole, YELLOW);
 	cin.clear();
 	cin.ignore(1000, '\n');
 	while (name.empty())
@@ -106,8 +126,8 @@ Settings UI::Run()
 	bool success = true;
 	do {
 		success = true;
-		settings.exePath = PromptPath();
-		HANDLE hFile = CreateFile(settings.exePath.c_str(), GENERIC_READ, 0, NULL, OPEN_EXISTING, NULL, NULL);
+		settings.exePackPath = PromptPackPath();
+		HANDLE hFile = CreateFile(settings.exePackPath.c_str(), GENERIC_READ, 0, NULL, OPEN_EXISTING, NULL, NULL);
 		if (hFile == INVALID_HANDLE_VALUE) {
 			UI::ErrorMsg(L"File either does not exist or cannot be open");
 			success = false;
@@ -128,6 +148,7 @@ Settings UI::Run()
 
 	if (settings.packLocation == PackLocation::Resource)
 		settings.resourceName = PromptResourceName();
-
+	
+	settings.exeHollowPath = PromptHollowPath();
 	return settings;
 }
