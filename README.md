@@ -1,14 +1,12 @@
-# RISCYpacker v1.0 (BROKEN - v1.1 will be up soon)
-Process Hollowing Packer Only Using FileMapping
-(Does NOT use ReadProcessMemory,WriteProcessMemory, SetThreadContext, CreateRemoteThread)
+# RISCYpacker v1.1
+Stealthy Process Hollowing Packer Only Using FileMapping
 
 *Educational/Training Purposes*
-(Malware Analysis / Class Training / CTF)
-
+(Classroom Training / Detection Development)
 
 
 ![alt text](https://i.imgur.com/iQvKRzj.png)
 
 ![alt text](https://i.imgur.com/4svECNc.png)
 
-![alt text](https://i.imgur.com/vvpZ4Pp.png)
+![alt text](https://i.imgur.com/QYRDPjQ.png)
